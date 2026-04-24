@@ -1,902 +1,1151 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
+<meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Inventory Team On-Site Trainer Dashboard</title>
-<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<title>On-Site Trainer Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 <style>
-  :root {
-    --gold: #f5c518;
-    --gold-light: #fde87c;
-    --gold-dark: #c9a000;
-    --bg: #0f1117;
-    --bg2: #181c28;
-    --bg3: #1e2336;
-    --card: #1a1f30;
-    --card2: #222840;
-    --border: rgba(245,197,24,0.18);
-    --text: #e8eaf0;
-    --muted: #8892a4;
-    --green: #22c55e;
-    --red: #ef4444;
-    --blue: #38bdf8;
-    --purple: #a78bfa;
-    --orange: #fb923c;
-    --pink: #f472b6;
-    --teal: #2dd4bf;
-    --radius: 12px;
-    --shadow: 0 4px 24px rgba(0,0,0,0.4);
-  }
-  * { margin:0; padding:0; box-sizing:border-box; }
-  body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: 'DM Sans', sans-serif;
-    font-size: 13px;
-    min-height: 100vh;
-  }
+:root {
+  --bg:        #05070f;
+  --bg2:       #090d1a;
+  --bg3:       #0e1425;
+  --card:      #0d1120;
+  --card2:     #111828;
+  --border:    rgba(99,179,237,0.12);
+  --border2:   rgba(99,179,237,0.22);
+  --accent:    #63b3ed;
+  --accent2:   #90cdf4;
+  --neon:      #00f5d4;
+  --neon2:     #00d4b1;
+  --warn:      #f6ad55;
+  --danger:    #fc8181;
+  --success:   #68d391;
+  --purple:    #b794f4;
+  --pink:      #f687b3;
+  --text:      #e2e8f0;
+  --muted:     #64748b;
+  --muted2:    #94a3b8;
+  --r:         14px;
+  --r2:        10px;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{
+  background:var(--bg);
+  color:var(--text);
+  font-family:'IBM Plex Sans',sans-serif;
+  font-size:13px;
+  min-height:100vh;
+  overflow-x:hidden;
+}
 
-  /* ── HEADER ── */
-  .header {
-    background: linear-gradient(135deg, #1a1200 0%, #3a2800 40%, #1a1200 100%);
-    border-bottom: 2px solid var(--gold);
-    padding: 14px 24px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    position: sticky; top: 0; z-index: 100;
-    box-shadow: 0 2px 30px rgba(245,197,24,0.15);
-  }
-  .header h1 {
-    font-family: 'Rajdhani', sans-serif;
-    font-size: 22px;
-    font-weight: 700;
-    color: var(--gold);
-    letter-spacing: 1.5px;
-    text-transform: uppercase;
-    text-shadow: 0 0 20px rgba(245,197,24,0.4);
-  }
-  .header-right { display:flex; align-items:center; gap:10px; }
-  .refresh-btn {
-    background: var(--gold);
-    color: #000;
-    border: none;
-    padding: 7px 16px;
-    border-radius: 8px;
-    font-family: 'DM Sans', sans-serif;
-    font-weight: 600;
-    font-size: 12px;
-    cursor: pointer;
-    transition: all .2s;
-  }
-  .refresh-btn:hover { background: var(--gold-light); transform: scale(1.05); }
-  .last-updated { color: var(--muted); font-size: 11px; }
+/* ── GRID BACKGROUND ── */
+body::before{
+  content:'';
+  position:fixed;inset:0;
+  background-image:
+    linear-gradient(rgba(99,179,237,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(99,179,237,0.03) 1px, transparent 1px);
+  background-size:40px 40px;
+  pointer-events:none;
+  z-index:0;
+}
 
-  /* ── FILTERS ── */
-  .filters {
-    background: var(--bg2);
-    border-bottom: 1px solid var(--border);
-    padding: 12px 24px;
-    display: flex;
-    gap: 12px;
-    flex-wrap: wrap;
-    align-items: center;
-  }
-  .filter-group { display:flex; align-items:center; gap:6px; }
-  .filter-label { color: var(--gold); font-size: 11px; font-weight: 600; text-transform:uppercase; letter-spacing:.5px; }
-  select, .date-input {
-    background: var(--card2);
-    border: 1px solid var(--border);
-    color: var(--text);
-    padding: 6px 10px;
-    border-radius: 8px;
-    font-family: 'DM Sans', sans-serif;
-    font-size: 12px;
-    cursor: pointer;
-    outline: none;
-    transition: border-color .2s;
-    min-width: 130px;
-  }
-  select:focus, .date-input:focus { border-color: var(--gold); }
-  .filter-sep { color: var(--border); font-size: 18px; }
+/* ── LOADER ── */
+#loader{
+  position:fixed;inset:0;
+  background:var(--bg);
+  display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  z-index:9999;gap:20px;
+}
+.loader-logo{
+  font-family:'Syne',sans-serif;
+  font-size:18px;font-weight:800;
+  color:var(--accent);
+  letter-spacing:4px;text-transform:uppercase;
+  opacity:0;animation:fadeUp .6s .2s forwards;
+}
+.loader-bar-wrap{
+  width:200px;height:2px;
+  background:rgba(99,179,237,0.1);
+  border-radius:2px;overflow:hidden;
+  opacity:0;animation:fadeUp .6s .4s forwards;
+}
+.loader-bar{
+  height:100%;width:0%;
+  background:linear-gradient(90deg,var(--neon),var(--accent));
+  border-radius:2px;
+  animation:loadBar 2s .6s ease forwards;
+}
+.loader-msg{
+  font-size:11px;color:var(--muted2);letter-spacing:1px;
+  opacity:0;animation:fadeUp .6s .5s forwards;
+}
+@keyframes loadBar{to{width:100%;}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:none;}}
 
-  /* ── MAIN WRAPPER ── */
-  .main { padding: 20px 24px; display:flex; flex-direction:column; gap:20px; }
+/* ── HEADER ── */
+.header{
+  position:sticky;top:0;z-index:100;
+  background:rgba(5,7,15,0.92);
+  backdrop-filter:blur(20px);
+  border-bottom:1px solid var(--border);
+  padding:0 28px;
+  display:flex;align-items:center;justify-content:space-between;
+  height:60px;
+}
+.header-brand{
+  display:flex;align-items:center;gap:12px;
+}
+.brand-icon{
+  width:36px;height:36px;border-radius:10px;
+  background:linear-gradient(135deg,var(--neon),var(--accent));
+  display:flex;align-items:center;justify-content:center;
+  font-size:16px;flex-shrink:0;
+  box-shadow:0 0 20px rgba(0,245,212,0.3);
+}
+.brand-title{
+  font-family:'Syne',sans-serif;
+  font-size:15px;font-weight:800;
+  color:var(--text);letter-spacing:.5px;
+}
+.brand-sub{font-size:10px;color:var(--muted2);letter-spacing:1px;margin-top:1px;}
+.header-right{display:flex;align-items:center;gap:10px;}
+.live-dot{
+  display:flex;align-items:center;gap:6px;
+  font-size:11px;color:var(--neon);font-family:'IBM Plex Mono',monospace;
+}
+.live-dot::before{
+  content:'';width:7px;height:7px;border-radius:50%;
+  background:var(--neon);
+  box-shadow:0 0 8px var(--neon);
+  animation:pulse 2s infinite;
+}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.4;}}
+.btn{
+  padding:7px 16px;border-radius:8px;border:1px solid var(--border2);
+  background:transparent;color:var(--accent2);
+  font-family:'IBM Plex Sans',sans-serif;font-size:11px;font-weight:600;
+  cursor:pointer;transition:all .2s;letter-spacing:.5px;
+}
+.btn:hover{background:rgba(99,179,237,0.1);border-color:var(--accent);}
+.btn-primary{background:var(--neon);color:#000;border-color:var(--neon);}
+.btn-primary:hover{background:var(--neon2);box-shadow:0 0 20px rgba(0,245,212,0.4);}
 
-  /* ── KPI CARDS ── */
-  .kpi-row {
-    display: grid;
-    grid-template-columns: repeat(7, 1fr);
-    gap: 12px;
-  }
-  .kpi-card {
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 14px 14px 10px;
-    position: relative;
-    overflow: hidden;
-    transition: transform .2s, box-shadow .2s;
-  }
-  .kpi-card:hover { transform: translateY(-3px); box-shadow: 0 8px 30px rgba(245,197,24,0.12); }
-  .kpi-card::before {
-    content: '';
-    position: absolute;
-    top: 0; left: 0; right: 0;
-    height: 3px;
-  }
-  .kpi-card.gold::before { background: var(--gold); }
-  .kpi-card.green::before { background: var(--green); }
-  .kpi-card.red::before { background: var(--red); }
-  .kpi-card.blue::before { background: var(--blue); }
-  .kpi-card.purple::before { background: var(--purple); }
-  .kpi-card.orange::before { background: var(--orange); }
-  .kpi-card.teal::before { background: var(--teal); }
+/* ── FILTER BAR ── */
+.filterbar{
+  background:var(--bg2);
+  border-bottom:1px solid var(--border);
+  padding:10px 28px;
+  display:flex;gap:10px;flex-wrap:wrap;align-items:center;
+}
+.filter-chip{display:flex;align-items:center;gap:6px;}
+.filter-chip label{
+  font-size:10px;font-weight:600;letter-spacing:.8px;
+  text-transform:uppercase;color:var(--neon);white-space:nowrap;
+}
+select,.date-in{
+  background:var(--card2);
+  border:1px solid var(--border);
+  color:var(--text);
+  padding:5px 10px;border-radius:8px;
+  font-family:'IBM Plex Sans',sans-serif;font-size:11px;
+  outline:none;cursor:pointer;min-width:120px;
+  transition:border-color .2s;
+}
+select:focus,.date-in:focus{border-color:var(--accent);}
+.filter-divider{width:1px;height:20px;background:var(--border);margin:0 4px;}
 
-  .kpi-label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .6px; color: var(--muted); margin-bottom:6px; }
-  .kpi-value { font-family: 'Rajdhani', sans-serif; font-size: 30px; font-weight: 700; color: var(--text); line-height:1; }
-  .kpi-pct { font-size: 11px; font-weight: 600; margin-top: 4px; }
-  .kpi-pct.up { color: var(--green); }
-  .kpi-pct.down { color: var(--red); }
-  .kpi-pct.neutral { color: var(--muted); }
-  .kpi-bar-track { background: rgba(255,255,255,0.07); border-radius: 4px; height: 4px; margin-top: 8px; overflow:hidden; }
-  .kpi-bar-fill { height: 4px; border-radius: 4px; transition: width 1s ease; }
+/* ── MAIN ── */
+#app{
+  padding:24px 28px;
+  display:flex;flex-direction:column;gap:20px;
+  position:relative;z-index:1;
+  opacity:0;transition:opacity .5s;
+}
+#app.visible{opacity:1;}
 
-  /* ── TWO-COL ROW ── */
-  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-  .three-col { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+/* ── ALERT ── */
+.alert{
+  padding:12px 16px;border-radius:var(--r2);
+  font-size:12px;line-height:1.6;
+  display:none;
+}
+.alert-warn{background:rgba(252,129,74,0.08);border:1px solid rgba(252,129,74,0.3);color:var(--warn);}
 
-  /* ── PANEL ── */
-  .panel {
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    overflow: hidden;
-    box-shadow: var(--shadow);
-  }
-  .panel-header {
-    background: linear-gradient(90deg, rgba(245,197,24,0.12) 0%, transparent 100%);
-    border-bottom: 1px solid var(--border);
-    padding: 10px 16px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-  }
-  .panel-title {
-    font-family: 'Rajdhani', sans-serif;
-    font-size: 14px;
-    font-weight: 600;
-    color: var(--gold);
-    letter-spacing: .8px;
-    text-transform: uppercase;
-  }
-  .panel-body { padding: 14px 16px; }
+/* ── KPI GRID ── */
+.kpi-grid{
+  display:grid;
+  grid-template-columns:repeat(7,1fr);
+  gap:12px;
+}
+.kpi{
+  background:var(--card);
+  border:1px solid var(--border);
+  border-radius:var(--r);
+  padding:16px;
+  position:relative;overflow:hidden;
+  cursor:default;
+  transition:transform .2s,box-shadow .2s,border-color .2s;
+  animation:fadeUp .5s both;
+}
+.kpi:hover{
+  transform:translateY(-4px);
+  box-shadow:0 12px 40px rgba(0,0,0,0.4);
+  border-color:var(--border2);
+}
+.kpi-glow{
+  position:absolute;top:-30px;right:-30px;
+  width:80px;height:80px;border-radius:50%;
+  opacity:.12;filter:blur(20px);
+}
+.kpi-icon{font-size:18px;margin-bottom:8px;}
+.kpi-label{
+  font-size:9px;font-weight:600;
+  text-transform:uppercase;letter-spacing:1px;
+  color:var(--muted2);margin-bottom:6px;
+}
+.kpi-val{
+  font-family:'Syne',sans-serif;
+  font-size:28px;font-weight:800;
+  line-height:1;color:var(--text);
+}
+.kpi-meta{
+  display:flex;align-items:center;gap:6px;
+  margin-top:6px;
+}
+.kpi-pct{font-size:11px;font-weight:600;}
+.kpi-sub{font-size:10px;color:var(--muted);}
+.kpi-bar{
+  height:3px;border-radius:2px;
+  background:rgba(255,255,255,0.06);
+  margin-top:10px;overflow:hidden;
+}
+.kpi-bar-fill{height:100%;border-radius:2px;transition:width 1.2s cubic-bezier(.4,0,.2,1);}
+/* accent colors per kpi */
+.kpi[data-c="neon"] .kpi-glow{background:var(--neon);}
+.kpi[data-c="neon"] .kpi-val{color:var(--neon);}
+.kpi[data-c="neon"] .kpi-bar-fill{background:var(--neon);}
+.kpi[data-c="success"] .kpi-glow{background:var(--success);}
+.kpi[data-c="success"] .kpi-val{color:var(--success);}
+.kpi[data-c="success"] .kpi-bar-fill{background:var(--success);}
+.kpi[data-c="danger"] .kpi-glow{background:var(--danger);}
+.kpi[data-c="danger"] .kpi-val{color:var(--danger);}
+.kpi[data-c="danger"] .kpi-bar-fill{background:var(--danger);}
+.kpi[data-c="warn"] .kpi-glow{background:var(--warn);}
+.kpi[data-c="warn"] .kpi-val{color:var(--warn);}
+.kpi[data-c="warn"] .kpi-bar-fill{background:var(--warn);}
+.kpi[data-c="purple"] .kpi-glow{background:var(--purple);}
+.kpi[data-c="purple"] .kpi-val{color:var(--purple);}
+.kpi[data-c="purple"] .kpi-bar-fill{background:var(--purple);}
+.kpi[data-c="pink"] .kpi-glow{background:var(--pink);}
+.kpi[data-c="pink"] .kpi-val{color:var(--pink);}
+.kpi[data-c="pink"] .kpi-bar-fill{background:var(--pink);}
+.kpi[data-c="accent"] .kpi-glow{background:var(--accent);}
+.kpi[data-c="accent"] .kpi-val{color:var(--accent);}
+.kpi[data-c="accent"] .kpi-bar-fill{background:var(--accent);}
 
-  /* ── CHART CONTAINER ── */
-  .chart-wrap { position: relative; }
+/* ── PANEL ── */
+.panel{
+  background:var(--card);
+  border:1px solid var(--border);
+  border-radius:var(--r);
+  overflow:hidden;
+  animation:fadeUp .5s both;
+}
+.panel-head{
+  padding:14px 18px;
+  border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
+  background:linear-gradient(90deg,rgba(99,179,237,0.05),transparent);
+}
+.panel-title{
+  font-family:'Syne',sans-serif;
+  font-size:13px;font-weight:700;
+  color:var(--text);letter-spacing:.3px;
+  display:flex;align-items:center;gap:8px;
+}
+.panel-title-icon{
+  width:24px;height:24px;border-radius:7px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:12px;
+}
+.panel-badge{
+  font-family:'IBM Plex Mono',monospace;
+  font-size:10px;color:var(--muted2);
+  background:rgba(255,255,255,0.05);
+  padding:2px 8px;border-radius:20px;
+  border:1px solid var(--border);
+}
+.panel-body{padding:16px 18px;}
 
-  /* ── TABLE ── */
-  .dash-table { width: 100%; border-collapse: collapse; font-size: 12px; }
-  .dash-table th {
-    background: rgba(245,197,24,0.08);
-    color: var(--gold);
-    font-size: 10px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: .6px;
-    padding: 8px 10px;
-    text-align: left;
-    border-bottom: 1px solid var(--border);
-    white-space: nowrap;
-  }
-  .dash-table td {
-    padding: 7px 10px;
-    border-bottom: 1px solid rgba(255,255,255,0.04);
-    color: var(--text);
-    white-space: nowrap;
-  }
-  .dash-table tr:last-child td { border-bottom: none; }
-  .dash-table tr:hover td { background: rgba(245,197,24,0.05); }
-  .rank-badge {
-    display: inline-flex; align-items:center; justify-content:center;
-    width: 20px; height: 20px; border-radius: 50%;
-    font-size: 10px; font-weight: 700;
-    background: rgba(245,197,24,0.15); color: var(--gold);
-  }
-  .rank-badge.r1 { background: rgba(255,215,0,0.25); color: gold; }
-  .rank-badge.r2 { background: rgba(192,192,192,0.2); color: silver; }
-  .rank-badge.r3 { background: rgba(205,127,50,0.2); color: #cd7f32; }
+/* ── GRID LAYOUTS ── */
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+.grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;}
+.grid-2-1{display:grid;grid-template-columns:2fr 1fr;gap:16px;}
+.grid-1-2{display:grid;grid-template-columns:1fr 2fr;gap:16px;}
 
-  .avg-bar-wrap { display:flex; align-items:center; gap:6px; }
-  .avg-bar { height: 6px; border-radius: 3px; background: linear-gradient(90deg, var(--gold), var(--gold-light)); }
+/* ── CHART ── */
+.chart-box{position:relative;}
 
-  /* ── STATUS PILLS ── */
-  .pill {
-    display: inline-block;
-    padding: 2px 8px; border-radius: 20px;
-    font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .4px;
-  }
-  .pill-done { background: rgba(34,197,94,0.15); color: var(--green); }
-  .pill-close { background: rgba(239,68,68,0.15); color: var(--red); }
-  .pill-virtual { background: rgba(56,189,248,0.15); color: var(--blue); }
-  .pill-physical { background: rgba(245,197,24,0.15); color: var(--gold); }
+/* ── TABLE ── */
+.tbl{width:100%;border-collapse:collapse;font-size:12px;}
+.tbl th{
+  padding:9px 12px;
+  text-align:left;
+  font-size:9px;font-weight:600;
+  text-transform:uppercase;letter-spacing:.8px;
+  color:var(--muted2);
+  border-bottom:1px solid var(--border);
+  white-space:nowrap;
+  background:rgba(255,255,255,0.02);
+}
+.tbl td{
+  padding:9px 12px;
+  border-bottom:1px solid rgba(255,255,255,0.03);
+  color:var(--text);white-space:nowrap;
+}
+.tbl tr:last-child td{border-bottom:none;}
+.tbl tbody tr:hover td{background:rgba(99,179,237,0.04);}
+.tbl tfoot td{
+  font-weight:700;color:var(--neon);
+  border-top:1px solid var(--border);
+  border-bottom:none;
+  background:rgba(0,245,212,0.04);
+}
+.tbl td.num{text-align:center;font-family:'IBM Plex Mono',monospace;}
+.tbl td.num-r{text-align:right;font-family:'IBM Plex Mono',monospace;}
 
-  /* ── HORIZONTAL BAR ── */
-  .hbar-row { display:flex; align-items:center; gap:8px; margin-bottom:8px; }
-  .hbar-label { width: 160px; font-size: 11px; color: var(--muted); flex-shrink:0; text-align:right; }
-  .hbar-track { flex: 1; height: 10px; background: rgba(255,255,255,0.06); border-radius:5px; overflow:hidden; }
-  .hbar-fill { height: 100%; border-radius: 5px; transition: width 1s ease; }
-  .hbar-val { width: 36px; text-align: right; font-size: 11px; font-weight: 600; color: var(--text); flex-shrink:0; }
+/* rank badges */
+.rank{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:22px;height:22px;border-radius:50%;
+  font-size:10px;font-weight:700;
+  background:rgba(99,179,237,0.1);color:var(--accent);
+}
+.rank.g{background:rgba(255,215,0,0.15);color:gold;}
+.rank.s{background:rgba(192,192,192,0.15);color:silver;}
+.rank.b{background:rgba(205,127,50,0.15);color:#cd7f32;}
 
-  /* ── TICKET STATUS ── */
-  .ticket-list { display:flex; flex-direction:column; gap:8px; }
-  .ticket-item { display:flex; align-items:center; justify-content:space-between; }
-  .ticket-item-label { font-size: 12px; color: var(--muted); }
-  .ticket-item-val {
-    font-family: 'Rajdhani', sans-serif;
-    font-size: 18px; font-weight: 700;
-  }
+/* scroll table */
+.scroll-table{max-height:260px;overflow-y:auto;}
+.scroll-table::-webkit-scrollbar{width:4px;}
+.scroll-table::-webkit-scrollbar-track{background:transparent;}
+.scroll-table::-webkit-scrollbar-thumb{background:var(--border2);border-radius:4px;}
 
-  /* ── LANGUAGE TABLE ── */
-  .lang-table { width:100%; font-size:12px; border-collapse:collapse; }
-  .lang-table th { color: var(--gold); font-size:10px; text-transform:uppercase; letter-spacing:.5px; padding:6px 8px; border-bottom:1px solid var(--border); text-align:left; }
-  .lang-table td { padding:6px 8px; border-bottom:1px solid rgba(255,255,255,0.04); }
-  .lang-table tr:last-child td { font-weight:700; color: var(--gold); }
+/* ── HBAR ── */
+.hbar-wrap{display:flex;flex-direction:column;gap:10px;}
+.hbar-row{display:flex;align-items:center;gap:10px;}
+.hbar-lbl{
+  width:170px;flex-shrink:0;text-align:right;
+  font-size:11px;color:var(--muted2);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.hbar-track{
+  flex:1;height:8px;border-radius:4px;
+  background:rgba(255,255,255,0.05);overflow:hidden;
+}
+.hbar-fill{height:100%;border-radius:4px;transition:width 1.2s cubic-bezier(.4,0,.2,1);}
+.hbar-num{
+  width:36px;text-align:right;flex-shrink:0;
+  font-family:'IBM Plex Mono',monospace;
+  font-size:11px;font-weight:500;color:var(--text);
+}
 
-  /* ── LOADING ── */
-  #loading-overlay {
-    position: fixed; inset: 0;
-    background: var(--bg);
-    display: flex; flex-direction:column; align-items:center; justify-content:center;
-    z-index: 1000;
-    gap: 16px;
-  }
-  .loader-ring {
-    width: 48px; height: 48px;
-    border: 3px solid rgba(245,197,24,0.15);
-    border-top-color: var(--gold);
-    border-radius: 50%;
-    animation: spin .8s linear infinite;
-  }
-  @keyframes spin { to { transform: rotate(360deg); } }
-  #loading-overlay p { color: var(--muted); font-size: 13px; }
+/* ── STATUS PILLS ── */
+.pill{
+  display:inline-block;padding:2px 9px;border-radius:20px;
+  font-size:10px;font-weight:600;letter-spacing:.3px;
+  white-space:nowrap;
+}
 
-  /* ── ERROR ── */
-  .error-banner {
-    background: rgba(239,68,68,0.1);
-    border: 1px solid rgba(239,68,68,0.3);
-    border-radius: var(--radius);
-    padding: 14px 18px;
-    color: var(--red);
-    font-size: 13px;
-    margin-bottom: 16px;
-  }
-  .info-banner {
-    background: rgba(56,189,248,0.08);
-    border: 1px solid rgba(56,189,248,0.25);
-    border-radius: var(--radius);
-    padding: 12px 16px;
-    color: var(--blue);
-    font-size: 12px;
-    margin-bottom: 12px;
-    line-height: 1.6;
-  }
+/* ── TICKET STATUS LIST ── */
+.status-list{display:flex;flex-direction:column;gap:10px;}
+.status-row{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:8px 12px;border-radius:10px;
+  background:rgba(255,255,255,0.02);
+  border:1px solid var(--border);
+  transition:background .2s;
+}
+.status-row:hover{background:rgba(255,255,255,0.04);}
+.status-row-left{display:flex;align-items:center;gap:8px;}
+.status-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.status-name{font-size:12px;color:var(--text);}
+.status-count{
+  font-family:'Syne',sans-serif;
+  font-size:20px;font-weight:800;
+}
 
-  /* ── CITY BAR CHART ── */
-  .city-chart-wrap { overflow-x: auto; }
-  .city-bars { display: flex; gap: 6px; align-items: flex-end; min-height: 100px; padding: 8px 4px 0; min-width: max-content; }
-  .city-bar-col { display: flex; flex-direction:column; align-items:center; gap: 4px; }
-  .city-bar { width: 28px; border-radius: 4px 4px 0 0; transition: height .8s ease; cursor: default; position:relative; }
-  .city-bar:hover::after {
-    content: attr(data-val);
-    position: absolute; bottom: 100%; left:50%; transform: translateX(-50%);
-    background: var(--bg3); color: var(--gold); font-size: 10px; font-weight:700;
-    padding: 2px 6px; border-radius: 4px; white-space:nowrap; margin-bottom:2px;
-    border: 1px solid var(--border);
-  }
-  .city-bar-name { font-size: 9px; color: var(--muted); transform: rotate(-40deg); transform-origin: top center; white-space: nowrap; margin-top: 6px; }
+/* ── LANG TABLE ── */
+.lang-row{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:7px 0;border-bottom:1px solid rgba(255,255,255,0.04);
+}
+.lang-row:last-child{border-bottom:none;}
+.lang-left{display:flex;align-items:center;gap:8px;}
+.lang-dot{width:8px;height:8px;border-radius:50%;}
+.lang-name{font-size:12px;color:var(--text);}
+.lang-cnt{
+  font-family:'IBM Plex Mono',monospace;
+  font-size:13px;font-weight:500;
+}
 
-  /* RESPONSIVE */
-  @media (max-width: 1200px) {
-    .kpi-row { grid-template-columns: repeat(4,1fr); }
-    .three-col { grid-template-columns: 1fr 1fr; }
-  }
-  @media (max-width: 768px) {
-    .kpi-row { grid-template-columns: repeat(2,1fr); }
-    .two-col, .three-col { grid-template-columns: 1fr; }
-    .main { padding: 14px; }
-    .filters { flex-direction: column; align-items: flex-start; }
-  }
+/* ── CITY CHART ── */
+.city-scroll{overflow-x:auto;padding-bottom:8px;}
+.city-scroll::-webkit-scrollbar{height:4px;}
+.city-scroll::-webkit-scrollbar-track{background:transparent;}
+.city-scroll::-webkit-scrollbar-thumb{background:var(--border2);border-radius:4px;}
+.city-bars{display:flex;gap:8px;align-items:flex-end;padding:8px 4px 4px;min-width:max-content;}
+.city-col{display:flex;flex-direction:column;align-items:center;gap:4px;}
+.city-bar-item{
+  width:32px;border-radius:6px 6px 0 0;
+  transition:height .9s cubic-bezier(.4,0,.2,1),opacity .2s;
+  cursor:pointer;position:relative;
+}
+.city-bar-item:hover{opacity:.8;}
+.city-bar-item:hover::after{
+  content:attr(data-tip);
+  position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);
+  background:var(--card2);color:var(--text);
+  font-size:10px;font-weight:600;white-space:nowrap;
+  padding:3px 8px;border-radius:6px;
+  border:1px solid var(--border2);
+  pointer-events:none;z-index:10;
+}
+.city-top-val{font-size:10px;font-weight:600;color:var(--text);font-family:'IBM Plex Mono',monospace;}
+.city-lbl{
+  font-size:9px;color:var(--muted);
+  transform:rotate(-45deg);transform-origin:top center;
+  white-space:nowrap;margin-top:4px;
+}
+
+/* ── AVG BAR ── */
+.avg-wrap{display:flex;align-items:center;gap:6px;}
+.avg-track{flex:1;height:5px;background:rgba(255,255,255,0.05);border-radius:3px;overflow:hidden;}
+.avg-fill{height:100%;border-radius:3px;background:linear-gradient(90deg,var(--neon),var(--accent));}
+.avg-val{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--neon);width:30px;flex-shrink:0;}
+
+/* ── TREND CHIP ── */
+.trend-up{color:var(--success);}
+.trend-dn{color:var(--danger);}
+
+/* ── ANIMATIONS ── */
+.kpi:nth-child(1){animation-delay:.05s;}
+.kpi:nth-child(2){animation-delay:.10s;}
+.kpi:nth-child(3){animation-delay:.15s;}
+.kpi:nth-child(4){animation-delay:.20s;}
+.kpi:nth-child(5){animation-delay:.25s;}
+.kpi:nth-child(6){animation-delay:.30s;}
+.kpi:nth-child(7){animation-delay:.35s;}
+
+/* ── RESPONSIVE ── */
+@media(max-width:1300px){
+  .kpi-grid{grid-template-columns:repeat(4,1fr);}
+  .grid-3{grid-template-columns:1fr 1fr;}
+}
+@media(max-width:900px){
+  .kpi-grid{grid-template-columns:repeat(2,1fr);}
+  .grid-2,.grid-2-1,.grid-1-2,.grid-3{grid-template-columns:1fr;}
+  #app{padding:16px;}
+  .header{padding:0 16px;}
+  .filterbar{padding:10px 16px;}
+}
 </style>
 </head>
 <body>
 
-<div id="loading-overlay">
-  <div class="loader-ring"></div>
-  <p>Loading dashboard data…</p>
+<!-- LOADER -->
+<div id="loader">
+  <div class="loader-logo">Trainer Dashboard</div>
+  <div class="loader-bar-wrap"><div class="loader-bar"></div></div>
+  <div class="loader-msg" id="loader-msg">Connecting to Google Sheet…</div>
 </div>
 
 <!-- HEADER -->
-<div class="header">
-  <h1>🏷️ Inventory Team On-Site Trainer Dashboard</h1>
+<header class="header">
+  <div class="header-brand">
+    <div class="brand-icon">📋</div>
+    <div>
+      <div class="brand-title">Inventory On-Site Trainer</div>
+      <div class="brand-sub">LIVE PERFORMANCE DASHBOARD</div>
+    </div>
+  </div>
   <div class="header-right">
-    <span class="last-updated" id="last-updated">–</span>
-    <button class="refresh-btn" onclick="loadData()">⟳ Refresh</button>
+    <div class="live-dot" id="live-status">CONNECTING</div>
+    <button class="btn" onclick="loadData()">↻ Refresh</button>
   </div>
+</header>
+
+<!-- FILTER BAR -->
+<div class="filterbar">
+  <div class="filter-chip">
+    <label>Trainer</label>
+    <select id="f-trainer"><option value="">All</option></select>
+  </div>
+  <div class="filter-divider"></div>
+  <div class="filter-chip">
+    <label>City</label>
+    <select id="f-city"><option value="">All</option></select>
+  </div>
+  <div class="filter-divider"></div>
+  <div class="filter-chip">
+    <label>Status</label>
+    <select id="f-status"><option value="">All</option></select>
+  </div>
+  <div class="filter-divider"></div>
+  <div class="filter-chip">
+    <label>Mode</label>
+    <select id="f-mode"><option value="">All</option></select>
+  </div>
+  <div class="filter-divider"></div>
+  <div class="filter-chip">
+    <label>From</label>
+    <input type="date" id="f-from" class="date-in"/>
+  </div>
+  <div class="filter-chip">
+    <label>To</label>
+    <input type="date" id="f-to" class="date-in"/>
+  </div>
+  <div class="filter-divider"></div>
+  <button class="btn btn-primary" onclick="applyFilters()">Apply</button>
+  <button class="btn" onclick="resetFilters()">Reset</button>
 </div>
 
-<!-- FILTERS -->
-<div class="filters">
-  <div class="filter-group">
-    <span class="filter-label">Trainer</span>
-    <select id="f-trainer"><option value="">All Trainers</option></select>
-  </div>
-  <div class="filter-group">
-    <span class="filter-label">City</span>
-    <select id="f-city"><option value="">All Cities</option></select>
-  </div>
-  <div class="filter-group">
-    <span class="filter-label">Status</span>
-    <select id="f-status"><option value="">All Status</option></select>
-  </div>
-  <div class="filter-group">
-    <span class="filter-label">Training Mode</span>
-    <select id="f-mode"><option value="">All Modes</option></select>
-  </div>
-  <div class="filter-group">
-    <span class="filter-label">From</span>
-    <input type="date" id="f-from" class="date-input"/>
-  </div>
-  <div class="filter-group">
-    <span class="filter-label">To</span>
-    <input type="date" id="f-to" class="date-input"/>
-  </div>
-  <button class="refresh-btn" onclick="applyFilters()">Apply</button>
-  <button class="refresh-btn" style="background:var(--bg3);color:var(--gold);border:1px solid var(--gold);" onclick="resetFilters()">Reset</button>
-</div>
+<!-- MAIN APP -->
+<div id="app">
+  <div class="alert alert-warn" id="alert-box"></div>
 
-<div class="main" id="main-content" style="display:none;">
+  <!-- KPIs -->
+  <div class="kpi-grid" id="kpi-grid"></div>
 
-  <!-- INFO BANNER -->
-  <div class="info-banner" id="info-banner" style="display:none;"></div>
-
-  <!-- KPI CARDS -->
-  <div class="kpi-row" id="kpi-row"></div>
-
-  <!-- ROW 2: Daily Call Chart + Trainer Table -->
-  <div class="two-col">
+  <!-- ROW: Trend Chart + Trainer Leaderboard -->
+  <div class="grid-2">
     <div class="panel">
-      <div class="panel-header"><span class="panel-title">📞 Daily Call / Status Trend</span></div>
-      <div class="panel-body chart-wrap" style="height:220px;">
-        <canvas id="dailyChart"></canvas>
+      <div class="panel-head">
+        <div class="panel-title">
+          <div class="panel-title-icon" style="background:rgba(0,245,212,0.1);">📈</div>
+          Daily Ticket Trend
+        </div>
+        <span class="panel-badge" id="trend-badge">–</span>
+      </div>
+      <div class="panel-body chart-box" style="height:240px;">
+        <canvas id="trendChart"></canvas>
       </div>
     </div>
     <div class="panel">
-      <div class="panel-header">
-        <span class="panel-title">🏆 Trainer Leaderboard</span>
-        <span style="font-size:11px;color:var(--muted);" id="trainer-count"></span>
+      <div class="panel-head">
+        <div class="panel-title">
+          <div class="panel-title-icon" style="background:rgba(246,173,85,0.1);">🏆</div>
+          Trainer Leaderboard
+        </div>
+        <span class="panel-badge" id="trainer-badge">–</span>
       </div>
-      <div class="panel-body" style="padding:0; max-height:220px; overflow-y:auto;">
-        <table class="dash-table" id="trainer-table">
-          <thead><tr><th>#</th><th>Trainer Name</th><th>Present</th><th>Training Done</th><th>Avg / Day</th></tr></thead>
+      <div class="scroll-table">
+        <table class="tbl">
+          <thead><tr><th>#</th><th>Trainer</th><th>Total</th><th>Done</th><th>Avg/Day</th></tr></thead>
           <tbody id="trainer-tbody"></tbody>
         </table>
       </div>
     </div>
   </div>
 
-  <!-- ROW 3: Date-wise line chart -->
+  <!-- ROW: Date-wise multi-line chart -->
   <div class="panel">
-    <div class="panel-header"><span class="panel-title">📅 Date-Wise Ticket Trend</span></div>
-    <div class="panel-body chart-wrap" style="height:240px;">
+    <div class="panel-head">
+      <div class="panel-title">
+        <div class="panel-title-icon" style="background:rgba(183,148,244,0.1);">📅</div>
+        Date-Wise Training Mode Breakdown
+      </div>
+    </div>
+    <div class="panel-body chart-box" style="height:260px;">
       <canvas id="dateChart"></canvas>
     </div>
   </div>
 
-  <!-- ROW 4: Training Mode + Ticket Status + Virtual Language -->
-  <div class="three-col">
+  <!-- ROW: Training Mode + Ticket Status + Languages -->
+  <div class="grid-3">
     <div class="panel">
-      <div class="panel-header"><span class="panel-title">🎯 Training Mode</span></div>
-      <div class="panel-body" id="training-mode-body"></div>
+      <div class="panel-head">
+        <div class="panel-title">
+          <div class="panel-title-icon" style="background:rgba(99,179,237,0.1);">🎯</div>
+          Training Mode
+        </div>
+      </div>
+      <div class="panel-body" id="mode-body"></div>
     </div>
     <div class="panel">
-      <div class="panel-header"><span class="panel-title">🎫 Ticket Status</span></div>
-      <div class="panel-body" id="ticket-status-body"></div>
+      <div class="panel-head">
+        <div class="panel-title">
+          <div class="panel-title-icon" style="background:rgba(104,211,145,0.1);">🎫</div>
+          Ticket Status
+        </div>
+      </div>
+      <div class="panel-body" id="status-body"></div>
     </div>
     <div class="panel">
-      <div class="panel-header"><span class="panel-title">🌐 Virtual Training Language</span></div>
-      <div class="panel-body" style="padding:0; max-height:260px; overflow-y:auto;">
-        <table class="lang-table" id="lang-table">
-          <thead><tr><th>Language</th><th>Training</th></tr></thead>
-          <tbody id="lang-tbody"></tbody>
-        </table>
+      <div class="panel-head">
+        <div class="panel-title">
+          <div class="panel-title-icon" style="background:rgba(246,135,179,0.1);">🌐</div>
+          Virtual Language
+        </div>
+        <span class="panel-badge" id="lang-total">–</span>
+      </div>
+      <div class="panel-body" id="lang-body"></div>
+    </div>
+  </div>
+
+  <!-- ROW: City Chart -->
+  <div class="panel">
+    <div class="panel-head">
+      <div class="panel-title">
+        <div class="panel-title-icon" style="background:rgba(0,245,212,0.1);">🏙️</div>
+        Training Volume by City
       </div>
     </div>
-  </div>
-
-  <!-- ROW 5: City Bar Chart -->
-  <div class="panel">
-    <div class="panel-header"><span class="panel-title">🏙️ Training Mode by City</span></div>
-    <div class="panel-body city-chart-wrap" style="padding:16px 16px 8px;">
-      <div id="city-bars-container" class="city-bars"></div>
+    <div class="panel-body city-scroll" style="padding:16px 18px 8px;">
+      <div class="city-bars" id="city-bars"></div>
     </div>
   </div>
 
-  <!-- ROW 6: Trainer-wise Training Done Table -->
+  <!-- ROW: Trainer Detail Table -->
   <div class="panel">
-    <div class="panel-header"><span class="panel-title">📋 Trainer-Wise Training Done</span></div>
-    <div class="panel-body" style="padding:0; overflow-x:auto;">
-      <table class="dash-table" id="trainer-detail-table">
+    <div class="panel-head">
+      <div class="panel-title">
+        <div class="panel-title-icon" style="background:rgba(183,148,244,0.1);">📊</div>
+        Trainer-Wise Training Breakdown
+      </div>
+    </div>
+    <div class="panel-body" style="padding:0;overflow-x:auto;">
+      <table class="tbl" id="detail-tbl">
         <thead>
           <tr>
             <th>Trainer Name</th>
-            <th>Physical Visit</th>
-            <th>Physical Re-training</th>
-            <th>Out of Station Visit</th>
-            <th>OFS (On-Field Support)</th>
-            <th>Virtual</th>
-            <th>Incomplete Physical Visit</th>
-            <th>Total</th>
+            <th class="num">Physical Visit</th>
+            <th class="num">Physical Re-training</th>
+            <th class="num">Out of Station</th>
+            <th class="num">OFS Support</th>
+            <th class="num">Virtual</th>
+            <th class="num">Incomplete Visit</th>
+            <th class="num">Feedback</th>
+            <th class="num">Total</th>
           </tr>
         </thead>
-        <tbody id="trainer-detail-tbody"></tbody>
-        <tfoot id="trainer-detail-tfoot"></tfoot>
+        <tbody id="detail-tbody"></tbody>
+        <tfoot id="detail-tfoot"></tfoot>
       </table>
     </div>
   </div>
 
-</div><!-- /main -->
+</div><!-- /app -->
 
 <script>
-// ─────────────────────────────────────────────────────────────────
-// CONFIG — Live Google Apps Script endpoint
-// ─────────────────────────────────────────────────────────────────
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxJSWqkwB7Z8vkGIfGBwfoSzMrd-YbJBenn5FNzro7pQDM_sjchNOR6QqQ5n9q8izebzw/exec';
-let allRows = [];
-let filteredRows = [];
-let charts = {};
+// ═══════════════════════════════════════════════
+// CONFIG
+// ═══════════════════════════════════════════════
+const API = 'https://script.google.com/macros/s/AKfycbxJSWqkwB7Z8vkGIfGBwfoSzMrd-YbJBenn5FNzro7pQDM_sjchNOR6QqQ5n9q8izebzw/exec';
 
-const TRAINING_MODES = [
+const MODES = [
   'Physical Visit','Physical Re-training','Out of Station Visit',
   'OFS (On-Field Support)','Virtual','Incomplete Physical Visit','Feedback Visit'
 ];
-const MODE_COLORS = ['#f5c518','#22c55e','#38bdf8','#a78bfa','#fb923c','#f472b6','#2dd4bf'];
+// Exact Status values from Google Form
+const STATUS_VALS = [
+  'Done','Close','Re-schedule',
+  'Not related to inventory/Done by someone',
+  'Tech concern','Need other languge / Physical visit'
+];
+// Exact Training Mode values from Google Form
+const MODE_VALS = [
+  'Virtual','Physical Visit','Physical Re-training',
+  'Feedback Visit','Out of Station Visit',
+  'Incomplete Physical Visit','OFS (On-Field Support)'
+];
+const COLORS = ['#00f5d4','#63b3ed','#68d391','#b794f4','#f6ad55','#f687b3','#fc8181'];
 
-// ─────────────────────────────────────────────────────────────────
-// LOAD DATA — fetches from Google Apps Script Web App
-// ─────────────────────────────────────────────────────────────────
+const STATUS_COLORS = {
+  'Done':                                         '#68d391',
+  'Close':                                        '#fc8181',
+  'Re-schedule':                                  '#b794f4',
+  'Not related to inventory/Done by someone':     '#63b3ed',
+  'Tech concern':                                 '#f6ad55',
+  'Need other languge / Physical visit':          '#00f5d4',
+};
+
+let allRows = [], filteredRows = [], charts = {};
+
+// ═══════════════════════════════════════════════
+// LOAD DATA
+// ═══════════════════════════════════════════════
 async function loadData() {
-  const overlay = document.getElementById('loading-overlay');
-  const overlayMsg = overlay.querySelector('p');
-  overlay.style.display = 'flex';
-  overlayMsg.textContent = 'Fetching live data from Google Sheet…';
+  setLoader(true, 'Connecting to Google Sheet…');
+  document.getElementById('live-status').textContent = 'CONNECTING';
 
   try {
-    const resp = await fetch(APPS_SCRIPT_URL);
-    if (!resp.ok) throw new Error('Network error: ' + resp.status);
-    const json = await resp.json();
-    if (json.status === 'error') throw new Error(json.message);
-    if (!json.data || json.data.length === 0) throw new Error('Sheet returned no rows');
-    allRows = normalizeRows(json.data);
-    document.getElementById('info-banner').style.display = 'none';
-    console.log(`✅ Loaded ${allRows.length} live rows`);
-  } catch (e) {
-    console.error('⚠️ Live fetch failed:', e.message);
-    const banner = document.getElementById('info-banner');
-    banner.innerHTML = `⚠️ <strong>Connection Error</strong> — ${e.message}.<br>
-      Please ensure the Apps Script is deployed as 'Anyone' and your sheet contains valid data.`;
-    banner.style.background = 'rgba(239,68,68,0.08)';
-    banner.style.borderColor = 'rgba(239,68,68,0.3)';
-    banner.style.color = 'var(--red)';
-    banner.style.display = 'block';
+    const res = await fetch(API, { method:'GET', redirect:'follow' });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const txt = await res.text();
+    const js  = JSON.parse(txt);
+    if (js.status === 'error') throw new Error(js.message);
+    if (!js.data?.length) throw new Error('Sheet returned 0 rows');
+    allRows = parseRows(js.data);
+    showAlert('', false);
+    document.getElementById('live-status').textContent = '🟢 LIVE · ' + new Date().toLocaleTimeString();
+    console.log('✅ Loaded', allRows.length, 'rows. Sample:', allRows[0]);
+  } catch(e) {
+    console.warn('⚠️ Using demo data:', e.message);
+    allRows = demoData();
+    showAlert(`⚠️ Live data unavailable (${e.message}). Showing demo data. Check Apps Script deployment.`, true);
+    document.getElementById('live-status').textContent = 'DEMO MODE';
   }
 
   populateFilters();
   applyFilters();
-  overlay.style.display = 'none';
-  document.getElementById('main-content').style.display = 'flex';
-  document.getElementById('last-updated').textContent = '🟢 Live · ' + new Date().toLocaleTimeString();
+  setLoader(false);
+  document.getElementById('app').classList.add('visible');
 }
 
-function normalizeRows(raw) {
-  // Log first row keys to console for debugging
+// ═══════════════════════════════════════════════
+// PARSE — Exact columns from your sheet
+// Timestamp=col A, Training Mode=col D,
+// Status=col H, City Name=col I,
+// Languages=col S, Trainer Name=col W, date=col X
+// ═══════════════════════════════════════════════
+function parseRows(raw) {
   if (raw.length > 0) {
-    console.log('📋 Sheet column keys:', Object.keys(raw[0]));
-    console.log('📋 First row sample:', raw[0]);
+    console.log('📋 Sheet headers:', Object.keys(raw[0]));
+    console.log('📋 Row 1 sample:', JSON.stringify(raw[0]));
+    console.log('📋 Row 2 sample:', JSON.stringify(raw[1]));
   }
+  const monthMap = {Jan:'01',Feb:'02',Mar:'03',Apr:'04',May:'05',Jun:'06',
+                    Jul:'07',Aug:'08',Sep:'09',Oct:'10',Nov:'11',Dec:'12'};
 
   return raw.map(r => {
-    const get = (...names) => {
-      for (const n of names) {
-        if (r[n] !== undefined) {
-          const val = String(r[n]).trim();
-          if (val !== '' && val.toLowerCase() !== 'null') return val;
+    const g = (...keys) => {
+      for (const k of keys) {
+        if (r[k] !== undefined) {
+          const v = String(r[k]).trim();
+          // only skip truly empty / null values — NOT "0"
+          if (v && v.toLowerCase() !== 'null' && v.toLowerCase() !== 'undefined') return v;
         }
       }
       return '';
     };
 
-    // Date: Column A logic (Handling M/D/YYYY HH:mm:ss)
-    let rawDate = get('date', 'Date', 'DATE', 'Timestamp');
+    // ── DATE from col X (header: "date") ──
+    let rawDate = g('date','Date','DATE','Timestamp','timestamp');
 
-    // Regex for M/D/YYYY or M/D/YYYY HH:mm:ss
-    const mdyMatch = rawDate.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
-    if (mdyMatch) {
-      const mm = mdyMatch[1].padStart(2, '0');
-      const dd = mdyMatch[2].padStart(2, '0');
-      const yyyy = mdyMatch[3];
-      rawDate = `${yyyy}-${mm}-${dd}`;
-    } else {
-      // Handle DD/MMM/YY format (e.g., 21/Mar/26)
-      const monthMap = { Jan:'01', Feb:'02', Mar:'03', Apr:'04', May:'05', Jun:'06', Jul:'07', Aug:'08', Sep:'09', Oct:'10', Nov:'11', Dec:'12' };
-      const sheetMatch = rawDate.match(/^(\d{1,2})\/([A-Za-z]{3})\/(\d{2})$/);
-      if (sheetMatch) {
-        const dd = sheetMatch[1].padStart(2, '0');
-        const mm = monthMap[sheetMatch[2]] || '01';
-        const yy = '20' + sheetMatch[3];
-        rawDate = `${yy}-${mm}-${dd}`;
-      }
-    }
+    // Try to extract a date if it's a timestamp like "21/Mar/26, 10:30 AM"
+    rawDate = rawDate.split(',')[0].trim();
 
-    // Fallback for other formats
-    const slashMatch = rawDate.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
-    if (slashMatch) rawDate = `${slashMatch[3]}-${slashMatch[1].padStart(2,'0')}-${slashMatch[2].padStart(2,'0')}`;
-    const dashMatch = rawDate.match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/);
-    if (dashMatch) rawDate = `${dashMatch[3]}-${dashMatch[2].padStart(2,'0')}-${dashMatch[1].padStart(2,'0')}`;
+    // DD/Mon/YY  e.g. 21/Mar/26
+    const m1 = rawDate.match(/^(\d{1,2})\/([A-Za-z]{3})\/(\d{2})$/);
+    if (m1) rawDate = `20${m1[3]}-${monthMap[m1[2]]||'01'}-${m1[1].padStart(2,'0')}`;
+
+    // DD/MM/YYYY
+    const m2 = rawDate.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    if (m2) rawDate = `${m2[3]}-${m2[2].padStart(2,'0')}-${m2[1].padStart(2,'0')}`;
+
+    // MM/DD/YYYY
+    const m3 = rawDate.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2})$/);
+    if (m3) rawDate = `20${m3[3]}-${m3[1].padStart(2,'0')}-${m3[2].padStart(2,'0')}`;
+
+    // Already YYYY-MM-DD
+    const m4 = rawDate.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (m4) rawDate = `${m4[1]}-${m4[2]}-${m4[3]}`;
 
     return {
       date:         rawDate,
-      trainerName:  get('Trainer Name', 'TrainerName', 'Trainer', 'Agent Name').trim(),
-      cityName:     get('City Name', 'CityName', 'City', 'Restaurantname'),
-      status:       get('Status', 'status').trim(),
-      trainingMode: get('Training Mode', 'TrainingMode', 'Mode', 'Category'),
-      language:     get('Languages', 'Language', 'Virtual Language'), // Col S
+      trainingMode: g('Training Mode','TrainingMode','training_mode','Mode','training mode'),
+      status:       g('Status','status','STATUS'),
+      cityName:     g('City Name','CityName','City','city','CITY NAME','City Name '),
+      language:     g('Languages','Language','Virtual Language','languages','LANGUAGES'),
+      trainerName:  g('Trainer Name','TrainerName','Trainer','trainer_name','TRAINER NAME','Trainer Name '),
     };
   }).filter(r => r.trainerName || r.date);
 }
 
-// ─────────────────────────────────────────────────────────────────
-// FILTERS
-// ─────────────────────────────────────────────────────────────────
-function populateFilters() {
-  fillSelect('f-trainer', [...new Set(allRows.map(r=>r.trainerName).filter(Boolean))].sort());
-  fillSelect('f-city', [...new Set(allRows.map(r=>r.cityName).filter(Boolean))].sort());
-  fillSelect('f-status', [...new Set(allRows.map(r=>r.status).filter(Boolean))].sort());
-  fillSelect('f-mode', [...new Set(allRows.map(r=>r.trainingMode).filter(Boolean))].sort());
-  
-  const now = new Date();
-  const y = now.getFullYear();
-  const m = String(now.getMonth() + 1).padStart(2, '0');
-  const d = String(now.getDate()).padStart(2, '0');
-  document.getElementById('f-from').value = `${y}-${m}-01`;
-  document.getElementById('f-to').value = `${y}-${m}-${d}`;
+// ═══════════════════════════════════════════════
+// DEMO DATA
+// ═══════════════════════════════════════════════
+function demoData() {
+  const trainers = ['NOMAN KHAN','ANKIT DAS','DASTAGIR ALAM','MANOJ SINGH','PRABHU V','DEEPAK PATEL','ABDUL REHMAN','RAHUL KUMAR','AMIT SHARMA','PRIYA SINGH','KUNAL ARSEKAR','GLADSON ANTO'];
+  const cities   = ['Delhi','Mumbai','Bangalore','Hyderabad','Pune','Chennai','Kolkata','Ahmedabad','Surat','Jaipur','Lucknow'];
+  const statuses = ['Done','Close','Re-schedule','Not related to inventory/Done by someone','Tech concern'];
+  const langs    = ['Telugu','Kannada','Hindi','Tamil','Marathi','Bengali','Gujarati','Oriya'];
+  const rows = [];
+  const base = new Date('2026-04-01');
+  for (let i=0;i<1100;i++) {
+    const d = new Date(base);
+    d.setDate(d.getDate() + Math.floor(Math.random()*22));
+    const mode = MODES[Math.floor(Math.random()*MODES.length)];
+    rows.push({
+      date: d.toISOString().slice(0,10),
+      trainerName: trainers[Math.floor(Math.random()*trainers.length)],
+      cityName:    cities[Math.floor(Math.random()*cities.length)],
+      status:      statuses[Math.floor(Math.random()*statuses.length)],
+      trainingMode:mode,
+      language:    mode==='Virtual' ? langs[Math.floor(Math.random()*langs.length)] : '',
+    });
+  }
+  return rows;
 }
 
-function fillSelect(id, vals) {
+// ═══════════════════════════════════════════════
+// FILTERS
+// ═══════════════════════════════════════════════
+function populateFilters() {
+  fillSel('f-trainer', uniq(allRows,'trainerName'));
+  fillSel('f-city',    uniq(allRows,'cityName'));
+  fillSel('f-status',  uniq(allRows,'status'));
+  fillSel('f-mode',    uniq(allRows,'trainingMode'));
+  const dates = allRows.map(r=>r.date).filter(Boolean).sort();
+  if (dates.length) {
+    document.getElementById('f-from').value = dates[0];
+    document.getElementById('f-to').value   = dates[dates.length-1];
+  }
+}
+function uniq(rows, key) {
+  return [...new Set(rows.map(r=>r[key]).filter(Boolean))].sort();
+}
+function fillSel(id, vals) {
   const el = document.getElementById(id);
   const first = el.options[0];
-  el.innerHTML = '';
-  el.appendChild(first);
-  vals.forEach(v => { const o = new Option(v,v); el.appendChild(o); });
+  el.innerHTML=''; el.appendChild(first);
+  vals.forEach(v => el.appendChild(new Option(v,v)));
 }
-
 function applyFilters() {
-  const trainer = document.getElementById('f-trainer').value;
-  const city = document.getElementById('f-city').value;
-  const status = document.getElementById('f-status').value;
-  const mode = document.getElementById('f-mode').value;
-  const from = document.getElementById('f-from').value;
-  const to = document.getElementById('f-to').value;
-  filteredRows = allRows.filter(r => {
-    if(trainer && r.trainerName !== trainer) return false;
-    if(city && r.cityName !== city) return false;
-    if(status && r.status !== status) return false;
-    if(mode && r.trainingMode !== mode) return false;
-    if(from && r.date < from) return false;
-    if(to && r.date > to) return false;
+  const t=v('f-trainer'),c=v('f-city'),s=v('f-status'),m=v('f-mode'),
+        fr=v('f-from'),to=v('f-to');
+  filteredRows = allRows.filter(r=>{
+    if(t && r.trainerName!==t) return false;
+    if(c && r.cityName!==c)    return false;
+    if(s && r.status!==s)      return false;
+    if(m && r.trainingMode!==m)return false;
+    if(fr && r.date<fr)        return false;
+    if(to && r.date>to)        return false;
     return true;
   });
   render();
 }
-
 function resetFilters() {
-  document.getElementById('f-trainer').value = '';
-  document.getElementById('f-city').value = '';
-  document.getElementById('f-status').value = '';
-  document.getElementById('f-mode').value = '';
-  populateFilters();
-  applyFilters();
+  ['f-trainer','f-city','f-status','f-mode'].forEach(id=>document.getElementById(id).value='');
+  populateFilters(); applyFilters();
 }
+function v(id){return document.getElementById(id).value;}
 
-// ─────────────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════
 // RENDER
-// ─────────────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════
 function render() {
   renderKPIs();
-  renderTrainerTable();
-  renderDailyChart();
+  renderTrend();
+  renderTrainers();
   renderDateChart();
-  renderTrainingMode();
-  renderTicketStatus();
-  renderLanguageTable();
-  renderCityBars();
-  renderTrainerDetailTable();
+  renderModes();
+  renderStatuses();
+  renderLanguages();
+  renderCities();
+  renderDetailTable();
 }
 
 // ── KPIs ──
 function renderKPIs() {
-  const total = filteredRows.length;
-  const done = filteredRows.filter(r=>r.status === 'Done').length;
-  const close = filteredRows.filter(r=>r.status === 'Close').length;
-  const notRel = filteredRows.filter(r=>r.status === 'Not related to inventory/Done by someone').length;
-  const reVisit = filteredRows.filter(r=>r.trainingMode === 'Physical Re-training').length;
-  const virtual = filteredRows.filter(r=>r.trainingMode === 'Virtual').length;
-  const physical = filteredRows.filter(r=>r.trainingMode === 'Physical Visit').length;
+  const total    = filteredRows.length;
+  // Case-insensitive matching to handle any whitespace/case issues
+  const norm = s => (s||'').trim().toLowerCase();
+  const done     = filteredRows.filter(r=>norm(r.status)==='done').length;
+  const close    = filteredRows.filter(r=>norm(r.status)==='close').length;
+  const resch    = filteredRows.filter(r=>norm(r.status)==='re-schedule').length;
+  const notRel   = filteredRows.filter(r=>norm(r.status).includes('not related')).length;
+  const techC    = filteredRows.filter(r=>norm(r.status).includes('tech concern')).length;
+  const virtual  = filteredRows.filter(r=>norm(r.trainingMode)==='virtual').length;
+  const physical = filteredRows.filter(r=>norm(r.trainingMode)==='physical visit').length;
   const trainers = new Set(filteredRows.map(r=>r.trainerName).filter(Boolean)).size;
 
   const kpis = [
-    { label:'Total Ticket', val:total, pct:'100%', pctType:'neutral', color:'gold', bar:100, barColor:'var(--gold)' },
-    { label:'Done Count', val:done, pct:(total?(done/total*100).toFixed(1)+'%':'–'), pctType:'up', color:'green', bar:total?done/total*100:0, barColor:'var(--green)' },
-    { label:'No Training Count', val:close, pct:(total?(close/total*100).toFixed(1)+'%':'–'), pctType:'down', color:'red', bar:total?close/total*100:0, barColor:'var(--red)' },
-    { label:'Re-Visit Count', val:reVisit, pct:(total?(reVisit/total*100).toFixed(1)+'%':'–'), pctType:'neutral', color:'blue', bar:total?reVisit/total*100:0, barColor:'var(--blue)' },
-    { label:'Virtual Done', val:virtual, pct:(total?(virtual/total*100).toFixed(1)+'%':'–'), pctType:'up', color:'purple', bar:total?virtual/total*100:0, barColor:'var(--purple)' },
-    { label:'Physical Visit', val:physical, pct:(total?(physical/total*100).toFixed(1)+'%':'–'), pctType:'up', color:'orange', bar:total?physical/total*100:0, barColor:'var(--orange)' },
-    { label:'Trainers', val:trainers, pct:'Active', pctType:'neutral', color:'teal', bar:100, barColor:'var(--teal)' },
+    {label:'Total Tickets',  val:total,    pct:'100%',                c:'neon',    icon:'🎫', bar:100},
+    {label:'Done',           val:done,     pct:pct(done,total),       c:'success', icon:'✅', bar:pct2n(done,total)},
+    {label:'Closed',         val:close,    pct:pct(close,total),      c:'danger',  icon:'❌', bar:pct2n(close,total)},
+    {label:'Re-scheduled',   val:resch,    pct:pct(resch,total),      c:'warn',    icon:'🔄', bar:pct2n(resch,total)},
+    {label:'Not Related',    val:notRel,   pct:pct(notRel,total),     c:'purple',  icon:'🔁', bar:pct2n(notRel,total)},
+    {label:'Tech Concern',   val:techC,    pct:pct(techC,total),      c:'pink',    icon:'🔧', bar:pct2n(techC,total)},
+    {label:'Trainers',       val:trainers, pct:'Active',              c:'accent',  icon:'👤', bar:100},
   ];
 
-  const row = document.getElementById('kpi-row');
-  row.innerHTML = kpis.map(k => `
-    <div class="kpi-card ${k.color}">
+  document.getElementById('kpi-grid').innerHTML = kpis.map(k=>`
+    <div class="kpi" data-c="${k.c}">
+      <div class="kpi-glow"></div>
+      <div class="kpi-icon">${k.icon}</div>
       <div class="kpi-label">${k.label}</div>
-      <div class="kpi-value">${k.val.toLocaleString()}</div>
-      <div class="kpi-pct ${k.pctType}">${k.pct}</div>
-      <div class="kpi-bar-track"><div class="kpi-bar-fill" style="width:${k.bar}%;background:${k.barColor};"></div></div>
+      <div class="kpi-val">${k.val.toLocaleString()}</div>
+      <div class="kpi-meta">
+        <span class="kpi-pct">${k.pct}</span>
+      </div>
+      <div class="kpi-bar"><div class="kpi-bar-fill" style="width:${k.bar}%"></div></div>
     </div>
   `).join('');
 }
 
-// ── TRAINER TABLE ──
-function renderTrainerTable() {
-  const trainerMap = {};
-  filteredRows.forEach(r => {
-    if(!r.trainerName) return;
-    if(!trainerMap[r.trainerName]) trainerMap[r.trainerName] = { present: 0, done: 0 };
-    trainerMap[r.trainerName].present++;
-    if(r.status === 'Done') trainerMap[r.trainerName].done++;
+// ── TREND CHART ──
+function renderTrend() {
+  const byDate={};
+  filteredRows.forEach(r=>{ if(r.date){byDate[r.date]=(byDate[r.date]||0)+1;} });
+  const labels=Object.keys(byDate).sort();
+  const vals=labels.map(l=>byDate[l]);
+  document.getElementById('trend-badge').textContent = labels.length + ' days';
+
+  if(charts.trend) charts.trend.destroy();
+  const ctx=document.getElementById('trendChart').getContext('2d');
+  const grad=ctx.createLinearGradient(0,0,0,220);
+  grad.addColorStop(0,'rgba(0,245,212,0.3)');
+  grad.addColorStop(1,'rgba(0,245,212,0)');
+
+  charts.trend = new Chart(ctx,{
+    type:'line',
+    data:{
+      labels:labels.map(d=>d.slice(5)),
+      datasets:[{
+        data:vals,
+        borderColor:'#00f5d4',
+        backgroundColor:grad,
+        borderWidth:2,
+        pointRadius:3,
+        pointBackgroundColor:'#00f5d4',
+        tension:.4,fill:true
+      }]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{
+        backgroundColor:'#0d1120',borderColor:'rgba(99,179,237,0.3)',borderWidth:1,
+        titleColor:'#94a3b8',bodyColor:'#e2e8f0',
+      }},
+      scales:{
+        x:{ticks:{color:'#64748b',font:{size:9},maxTicksLimit:15},grid:{color:'rgba(255,255,255,0.03)'}},
+        y:{ticks:{color:'#64748b',font:{size:9}},grid:{color:'rgba(255,255,255,0.03)'}}
+      }
+    }
   });
-  const arr = Object.entries(trainerMap).map(([name,d])=>({name,...d,avg:(d.done/Math.max(1,d.present)).toFixed(2)}));
-  arr.sort((a,b)=>b.done-a.done);
-  const maxDone = arr[0]?.done || 1;
-  document.getElementById('trainer-count').textContent = `${arr.length} trainers`;
-  document.getElementById('trainer-tbody').innerHTML = arr.slice(0,15).map((t,i)=>`
+}
+
+// ── TRAINER TABLE ──
+function renderTrainers() {
+  const map={};
+  filteredRows.forEach(r=>{
+    if(!r.trainerName) return;
+    if(!map[r.trainerName]) map[r.trainerName]={total:0,done:0,dates:new Set()};
+    map[r.trainerName].total++;
+    if((r.status||'').trim().toLowerCase()==='done') map[r.trainerName].done++;
+    if(r.date) map[r.trainerName].dates.add(r.date);
+  });
+  const arr=Object.entries(map)
+    .map(([n,d])=>({n,total:d.total,done:d.done,days:d.dates.size,avg:(d.done/Math.max(1,d.dates.size)).toFixed(2)}))
+    .sort((a,b)=>b.done-a.done);
+  const maxDone=arr[0]?.done||1;
+  document.getElementById('trainer-badge').textContent=arr.length+' trainers';
+  document.getElementById('trainer-tbody').innerHTML=arr.slice(0,20).map((t,i)=>`
     <tr>
-      <td><span class="rank-badge ${i===0?'r1':i===1?'r2':i===2?'r3':''}">${i+1}</span></td>
-      <td style="font-weight:500;">${t.name}</td>
-      <td>${t.present}</td>
-      <td>${t.done}</td>
-      <td>
-        <div class="avg-bar-wrap">
-          <div class="avg-bar" style="width:${Math.round(t.done/maxDone*80)+10}px;"></div>
-          <span style="font-size:11px;color:var(--gold);">${t.avg}</span>
+      <td><span class="rank ${i===0?'g':i===1?'s':i===2?'b':''}">${i+1}</span></td>
+      <td style="font-weight:500;max-width:160px;overflow:hidden;text-overflow:ellipsis;">${t.n}</td>
+      <td class="num">${t.total}</td>
+      <td class="num" style="color:var(--success);font-weight:600;">${t.done}</td>
+      <td class="num">
+        <div class="avg-wrap">
+          <div class="avg-track"><div class="avg-fill" style="width:${Math.round(t.done/maxDone*100)}%"></div></div>
+          <span class="avg-val">${t.avg}</span>
         </div>
       </td>
     </tr>
   `).join('');
 }
 
-// ── DAILY CHART ──
-function renderDailyChart() {
-  const byDate = {};
-  filteredRows.forEach(r => {
-    if(!r.date) return;
-    const d = r.date.slice(5); // MM-DD
-    if(!byDate[d]) byDate[d] = 0;
-    byDate[d]++;
-  });
-  const labels = Object.keys(byDate).sort();
-  const vals = labels.map(l=>byDate[l]);
-
-  if(charts.daily) charts.daily.destroy();
-  const ctx = document.getElementById('dailyChart').getContext('2d');
-  charts.daily = new Chart(ctx, {
-    type: 'bar',
-    data: {
-      labels,
-      datasets: [{
-        label: 'Tickets',
-        data: vals,
-        backgroundColor: 'rgba(245,197,24,0.5)',
-        borderColor: 'var(--gold)',
-        borderWidth: 1,
-        borderRadius: 4,
-      }]
-    },
-    options: {
-      responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { display: false } },
-      scales: {
-        x: { ticks: { color: '#8892a4', font:{size:9} }, grid: { color: 'rgba(255,255,255,0.04)' } },
-        y: { ticks: { color: '#8892a4', font:{size:9} }, grid: { color: 'rgba(255,255,255,0.04)' } }
-      }
-    }
-  });
-}
-
-// ── DATE-WISE LINE CHART ──
+// ── DATE CHART ──
 function renderDateChart() {
-  const modeByDate = {};
-  const datesSet = new Set();
-  filteredRows.forEach(r => {
+  const mbd={};const ds=new Set();
+  filteredRows.forEach(r=>{
     if(!r.date) return;
-    datesSet.add(r.date);
-    if(!modeByDate[r.trainingMode]) modeByDate[r.trainingMode] = {};
-    modeByDate[r.trainingMode][r.date] = (modeByDate[r.trainingMode][r.date]||0)+1;
+    ds.add(r.date);
+    if(!mbd[r.trainingMode]) mbd[r.trainingMode]={};
+    mbd[r.trainingMode][r.date]=(mbd[r.trainingMode][r.date]||0)+1;
   });
-  const dates = [...datesSet].sort();
-
-  const topModes = TRAINING_MODES.filter(m => filteredRows.some(r=>r.trainingMode===m));
-  const datasets = topModes.map((mode,i) => ({
-    label: mode,
-    data: dates.map(d => modeByDate[mode]?.[d] || 0),
-    borderColor: MODE_COLORS[i],
-    backgroundColor: MODE_COLORS[i]+'22',
-    borderWidth: 2,
-    pointRadius: 3,
-    tension: 0.3,
-    fill: false
+  const dates=[...ds].sort();
+  const activeModes=MODES.filter(m=>filteredRows.some(r=>r.trainingMode===m));
+  const datasets=activeModes.map((mode,i)=>({
+    label:mode,
+    data:dates.map(d=>mbd[mode]?.[d]||0),
+    borderColor:COLORS[i],
+    backgroundColor:COLORS[i]+'18',
+    borderWidth:2,pointRadius:2,tension:.3,fill:false
   }));
 
   if(charts.date) charts.date.destroy();
-  const ctx = document.getElementById('dateChart').getContext('2d');
-  charts.date = new Chart(ctx, {
-    type: 'line',
-    data: { labels: dates.map(d=>d.slice(5)), datasets },
-    options: {
-      responsive: true, maintainAspectRatio: false,
-      plugins: {
-        legend: {
-          labels: { color: '#8892a4', font:{size:10}, boxWidth:12, padding:12 }
-        }
-      },
-      scales: {
-        x: { ticks: { color: '#8892a4', font:{size:9}, maxTicksLimit:20 }, grid: { color: 'rgba(255,255,255,0.04)' } },
-        y: { ticks: { color: '#8892a4', font:{size:9} }, grid: { color: 'rgba(255,255,255,0.04)' } }
+  const ctx=document.getElementById('dateChart').getContext('2d');
+  charts.date=new Chart(ctx,{
+    type:'line',data:{labels:dates.map(d=>d.slice(5)),datasets},
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{
+        labels:{color:'#94a3b8',font:{size:10},boxWidth:10,padding:14}
+      },tooltip:{
+        backgroundColor:'#0d1120',borderColor:'rgba(99,179,237,0.3)',borderWidth:1,
+        titleColor:'#94a3b8',bodyColor:'#e2e8f0',
+      }},
+      scales:{
+        x:{ticks:{color:'#64748b',font:{size:9},maxTicksLimit:20},grid:{color:'rgba(255,255,255,0.03)'}},
+        y:{ticks:{color:'#64748b',font:{size:9}},grid:{color:'rgba(255,255,255,0.03)'}}
       }
     }
   });
 }
 
-// ── TRAINING MODE BARS ──
-function renderTrainingMode() {
-  const counts = {};
-  filteredRows.forEach(r => { if(r.trainingMode) counts[r.trainingMode] = (counts[r.trainingMode]||0)+1; });
-  const sorted = Object.entries(counts).sort((a,b)=>b[1]-a[1]);
-  const max = sorted[0]?.[1] || 1;
-  const body = document.getElementById('training-mode-body');
-  body.innerHTML = sorted.map(([mode,cnt],i) => `
-    <div class="hbar-row">
-      <div class="hbar-label">${mode}</div>
-      <div class="hbar-track">
-        <div class="hbar-fill" style="width:${cnt/max*100}%;background:${MODE_COLORS[i%MODE_COLORS.length]};"></div>
+// ── TRAINING MODES ──
+function renderModes() {
+  const cnt={};
+  filteredRows.forEach(r=>{ 
+    if(r.trainingMode) {
+      const key = r.trainingMode.trim();
+      cnt[key]=(cnt[key]||0)+1;
+    }
+  });
+  const sorted=Object.entries(cnt).sort((a,b)=>b[1]-a[1]);
+  const max=sorted[0]?.[1]||1;
+  document.getElementById('mode-body').innerHTML=`<div class="hbar-wrap">`+
+    sorted.map(([m,c],i)=>`
+      <div class="hbar-row">
+        <div class="hbar-lbl" title="${m}">${m}</div>
+        <div class="hbar-track">
+          <div class="hbar-fill" style="width:${c/max*100}%;background:${COLORS[i%COLORS.length]};"></div>
+        </div>
+        <div class="hbar-num">${c}</div>
       </div>
-      <div class="hbar-val">${cnt}</div>
-    </div>
-  `).join('');
+    `).join('')+`</div>`;
 }
 
 // ── TICKET STATUS ──
-function renderTicketStatus() {
-  const counts = {};
-  filteredRows.forEach(r => { if(r.status) counts[r.status] = (counts[r.status]||0)+1; });
-  const sorted = Object.entries(counts).sort((a,b)=>b[1]-a[1]);
-  const statusColors = { 
-    'Done': 'var(--green)', 
-    'Close': 'var(--red)', 
-    'Re-schedule': 'var(--purple)', 
-    'Not related to inventory/Done by someone': 'var(--blue)', 
-    'Tech concern': 'var(--orange)',
-    'Need other languge / Physical visit': 'var(--teal)'
-  };
-  const body = document.getElementById('ticket-status-body');
-  body.innerHTML = `<div class="ticket-list">` + sorted.map(([s,cnt]) => `
-    <div class="ticket-item">
-      <span class="ticket-item-label" style="display:flex;align-items:center;gap:6px;">
-        <span style="width:8px;height:8px;border-radius:50%;background:${statusColors[s]||'var(--muted)'};display:inline-block;"></span>
-        ${s}
-      </span>
-      <span class="ticket-item-val" style="color:${statusColors[s]||'var(--text)'};">${cnt.toLocaleString()}</span>
-    </div>
-  `).join('') + `</div>`;
+function renderStatuses() {
+  const cnt={};
+  filteredRows.forEach(r=>{ 
+    if(r.status) {
+      // normalize key for display
+      const key = r.status.trim();
+      cnt[key]=(cnt[key]||0)+1;
+    }
+  });
+  const sorted=Object.entries(cnt).sort((a,b)=>b[1]-a[1]);
+  document.getElementById('status-body').innerHTML=`<div class="status-list">`+
+    sorted.map(([s,c])=>{
+      const col=STATUS_COLORS[s]||'#94a3b8';
+      return `
+        <div class="status-row">
+          <div class="status-row-left">
+            <div class="status-dot" style="background:${col};box-shadow:0 0 6px ${col}66;"></div>
+            <span class="status-name">${s}</span>
+          </div>
+          <span class="status-count" style="color:${col};">${c.toLocaleString()}</span>
+        </div>
+      `;
+    }).join('')+`</div>`;
 }
 
-// ── LANGUAGE TABLE ──
-function renderLanguageTable() {
-  const counts = {};
-  filteredRows.filter(r=>r.language).forEach(r => { counts[r.language] = (counts[r.language]||0)+1; });
-  const sorted = Object.entries(counts).sort((a,b)=>b[1]-a[1]);
-  const total = sorted.reduce((s,[,v])=>s+v,0);
-  const langColors = ['#f5c518','#22c55e','#38bdf8','#a78bfa','#fb923c','#f472b6','#2dd4bf','#64748b'];
-  document.getElementById('lang-tbody').innerHTML = sorted.map(([lang,cnt],i) => `
-    <tr>
-      <td style="display:flex;align-items:center;gap:6px;">
-        <span style="width:8px;height:8px;border-radius:50%;background:${langColors[i%langColors.length]};display:inline-block;flex-shrink:0;"></span>
-        ${lang}
-      </td>
-      <td style="font-weight:600;color:${langColors[i%langColors.length]};">${cnt}</td>
-    </tr>
-  `).join('') + `<tr><td style="color:var(--gold);font-weight:700;">Grand total</td><td style="font-weight:700;color:var(--gold);">${total}</td></tr>`;
+// ── LANGUAGES ──
+function renderLanguages() {
+  const cnt={};
+  filteredRows.filter(r=>r.language).forEach(r=>{ cnt[r.language]=(cnt[r.language]||0)+1; });
+  const sorted=Object.entries(cnt).sort((a,b)=>b[1]-a[1]);
+  const total=sorted.reduce((s,[,v])=>s+v,0);
+  const lc=['#00f5d4','#63b3ed','#68d391','#b794f4','#f6ad55','#f687b3','#fc8181','#94a3b8'];
+  document.getElementById('lang-total').textContent=total+' virtual';
+  document.getElementById('lang-body').innerHTML=
+    sorted.map(([l,c],i)=>`
+      <div class="lang-row">
+        <div class="lang-left">
+          <div class="lang-dot" style="background:${lc[i%lc.length]};box-shadow:0 0 5px ${lc[i%lc.length]}66;"></div>
+          <span class="lang-name">${l}</span>
+        </div>
+        <span class="lang-cnt" style="color:${lc[i%lc.length]};">${c}</span>
+      </div>
+    `).join('')+
+    `<div class="lang-row" style="border-top:1px solid var(--border);margin-top:4px;padding-top:8px;">
+      <div class="lang-left" style="font-weight:700;color:var(--neon);">Grand Total</div>
+      <span class="lang-cnt" style="color:var(--neon);font-weight:700;">${total}</span>
+    </div>`;
 }
 
 // ── CITY BARS ──
-function renderCityBars() {
-  const counts = {};
-  filteredRows.forEach(r => { if(r.cityName) counts[r.cityName] = (counts[r.cityName]||0)+1; });
-  const sorted = Object.entries(counts).sort((a,b)=>b[1]-a[1]).slice(0,30);
-  const max = sorted[0]?.[1] || 1;
-  const container = document.getElementById('city-bars-container');
-  container.innerHTML = sorted.map(([city,cnt],i) => {
-    const h = Math.max(8, Math.round(cnt/max*90));
+function renderCities() {
+  const cnt={};
+  filteredRows.forEach(r=>{ if(r.cityName) cnt[r.cityName]=(cnt[r.cityName]||0)+1; });
+  const sorted=Object.entries(cnt).sort((a,b)=>b[1]-a[1]).slice(0,35);
+  const max=sorted[0]?.[1]||1;
+  document.getElementById('city-bars').innerHTML=sorted.map(([city,c],i)=>{
+    const h=Math.max(10,Math.round(c/max*100));
     return `
-      <div class="city-bar-col">
-        <div style="font-size:10px;color:var(--text);font-weight:600;">${cnt}</div>
-        <div class="city-bar" style="height:${h}px;background:${MODE_COLORS[i%MODE_COLORS.length]};" data-val="${cnt}" title="${city}: ${cnt}"></div>
-        <div class="city-bar-name">${city}</div>
+      <div class="city-col">
+        <div class="city-top-val">${c}</div>
+        <div class="city-bar-item" style="height:${h}px;background:${COLORS[i%COLORS.length]};" data-tip="${city}: ${c}"></div>
+        <div class="city-lbl">${city}</div>
       </div>
     `;
   }).join('');
 }
 
-// ── TRAINER DETAIL TABLE ──
-function renderTrainerDetailTable() {
-  const trainerMap = {};
-  filteredRows.forEach(r => {
-    const key = r.trainerName || '(Unknown)';
-    if(!trainerMap[key]) {
-      trainerMap[key] = { 'Physical Visit':0,'Physical Re-training':0,'Out of Station Visit':0,'OFS (On-Field Support)':0,'Virtual':0,'Incomplete Physical Visit':0 };
-    }
-    if(TRAINING_MODES.includes(r.trainingMode)) {
-      trainerMap[key][r.trainingMode] = (trainerMap[key][r.trainingMode]||0)+1;
-    }
+// ── DETAIL TABLE ──
+function renderDetailTable() {
+  const modeKeys=['Physical Visit','Physical Re-training','Out of Station Visit','OFS (On-Field Support)','Virtual','Incomplete Physical Visit','Feedback Visit'];
+  const map={};
+  filteredRows.forEach(r=>{
+    const k=r.trainerName||'(Unknown)';
+    if(!map[k]) { map[k]={}; modeKeys.forEach(m=>map[k][m]=0); }
+    if(modeKeys.includes(r.trainingMode)) map[k][r.trainingMode]++;
   });
-
-  const modeKeys = ['Physical Visit','Physical Re-training','Out of Station Visit','OFS (On-Field Support)','Virtual','Incomplete Physical Visit'];
-  const totals = {};
-  modeKeys.forEach(m => totals[m] = 0);
-  let grandTotal = 0;
-
-  const rows = Object.entries(trainerMap).sort((a,b) => {
-    const at = modeKeys.reduce((s,m)=>s+a[1][m],0);
-    const bt = modeKeys.reduce((s,m)=>s+b[1][m],0);
+  const totals={}; modeKeys.forEach(m=>totals[m]=0);
+  let grand=0;
+  const rows=Object.entries(map).sort((a,b)=>{
+    const at=modeKeys.reduce((s,m)=>s+a[1][m],0);
+    const bt=modeKeys.reduce((s,m)=>s+b[1][m],0);
     return bt-at;
   });
-
-  document.getElementById('trainer-detail-tbody').innerHTML = rows.map(([name, data]) => {
-    const rowTotal = modeKeys.reduce((s,m)=>s+data[m],0);
-    grandTotal += rowTotal;
-    modeKeys.forEach(m => totals[m] += data[m]);
+  document.getElementById('detail-tbody').innerHTML=rows.map(([name,data])=>{
+    const rowT=modeKeys.reduce((s,m)=>s+data[m],0);
+    grand+=rowT; modeKeys.forEach(m=>totals[m]+=data[m]);
     return `<tr>
-      <td style="font-weight:500;">${name}</td>
-      ${modeKeys.map(m => `<td style="text-align:center;">${data[m]||'–'}</td>`).join('')}
-      <td style="text-align:center;font-weight:700;color:var(--gold);">${rowTotal}</td>
+      <td style="font-weight:500;min-width:150px;">${name}</td>
+      ${modeKeys.map(m=>`<td class="num">${data[m]||'–'}</td>`).join('')}
+      <td class="num" style="font-weight:700;color:var(--neon);">${rowT}</td>
     </tr>`;
   }).join('');
-
-  document.getElementById('trainer-detail-tfoot').innerHTML = `
-    <tr style="background:rgba(245,197,24,0.08);font-weight:700;">
-      <td style="color:var(--gold);">Total</td>
-      ${modeKeys.map(m=>`<td style="text-align:center;color:var(--gold);">${totals[m]}</td>`).join('')}
-      <td style="text-align:center;color:var(--gold);">${grandTotal}</td>
-    </tr>
-  `;
+  document.getElementById('detail-tfoot').innerHTML=`
+    <tr>
+      <td>Total</td>
+      ${modeKeys.map(m=>`<td class="num">${totals[m]}</td>`).join('')}
+      <td class="num">${grand}</td>
+    </tr>`;
 }
 
-// ─────────────────────────────────────────────────────────────────
-// INIT
-// ─────────────────────────────────────────────────────────────────
-window.addEventListener('DOMContentLoaded', loadData);
+// ═══════════════════════════════════════════════
+// UTILS
+// ═══════════════════════════════════════════════
+function pct(a,b){ return b? (a/b*100).toFixed(1)+'%' : '–'; }
+function pct2n(a,b){ return b? a/b*100 : 0; }
+function setLoader(show, msg=''){
+  document.getElementById('loader').style.display=show?'flex':'none';
+  if(msg) document.getElementById('loader-msg').textContent=msg;
+}
+function showAlert(msg,show){
+  const el=document.getElementById('alert-box');
+  el.textContent=msg; el.style.display=show?'block':'none';
+}
+
+// ═══════════════════════════════════════════════
+// BOOT
+// ═══════════════════════════════════════════════
+window.addEventListener('DOMContentLoaded', () => {
+  setTimeout(loadData, 2200); // let loader animation play
+});
 </script>
 </body>
 </html>
